@@ -377,21 +377,28 @@ function _setup_segments($gi){
   return $gi;
 }
 
-function geoip_open($filename, $flags) {
-  $gi = new GeoIP;
-  $gi->flags = $flags;
-  if ($gi->flags & GEOIP_SHARED_MEMORY) {
-    $gi->shmid = @shmop_open (GEOIP_SHM_KEY, "a", 0, 0);
-    } else {
-    $gi->filehandle = fopen($filename,"rb") or die( "Can not open $filename\n" );
-    if ($gi->flags & GEOIP_MEMORY_CACHE) {
-        $s_array = fstat($gi->filehandle);
-        $gi->memory_buffer = fread($gi->filehandle, $s_array['size']);
-    }
-  }
+function geoip_open($filename, $flags)
+{
+    $gi = new GeoIP;
+    $gi->flags = $flags;
+    if ($gi->flags & GEOIP_SHARED_MEMORY) {
+        $gi->shmid = @shmop_open(GEOIP_SHM_KEY, "a", 0, 0);
 
-  $gi = _setup_segments($gi);
-  return $gi;
+        if ($gi->shmid === false) {
+            geoip_load_shared_mem($filename);
+            $gi->shmid = @shmop_open(GEOIP_SHM_KEY, "a", 0, 0);
+        }
+    } else {
+        $gi->filehandle = fopen($filename, "rb") or die("Can not open $filename\n");
+        if ($gi->flags & GEOIP_MEMORY_CACHE) {
+            $s_array = fstat($gi->filehandle);
+            $gi->memory_buffer = fread($gi->filehandle, $s_array['size']);
+        }
+    }
+
+    $gi = _setup_segments($gi);
+
+    return $gi;
 }
 
 function geoip_close($gi) {
